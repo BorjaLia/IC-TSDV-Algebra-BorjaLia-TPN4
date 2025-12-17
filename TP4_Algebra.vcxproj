@@ -154,6 +154,7 @@
   <ItemGroup>
     <ClInclude Include="src\AABB.h" />
     <ClInclude Include="src\Frustum.h" />
+    <ClInclude Include="src\main.h" />
     <ClInclude Include="src\SceneObject.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -7,6 +7,7 @@
 #include "AABB.h"
 #include "Frustum.h"
 #include "SceneObject.h"
+#include "main.h"
 
 int main()
 {
@@ -54,95 +55,14 @@ int main()
 
 	while (!WindowShouldClose())
 	{
-		UpdateCamera(&camera, CAMERA_FREE);
-
-		if (IsKeyPressed(KEY_Q))
-		{
-			camera.fovy += 2.0f;
-		}
-		if (IsKeyPressed(KEY_E))
-		{
-			camera.fovy -= 2.0f;
-		}
-		camera.fovy = Clamp(camera.fovy, 1.0f, 180.0f);
-
-		if (IsKeyPressed(KEY_R))
-		{
-			nearPlane++;
-		}
-		if (IsKeyPressed(KEY_F))
-		{
-			nearPlane--;
-		}
-		nearPlane = Clamp(nearPlane, 0.0f, farPlane - 1.0f);
-
-		if (IsKeyPressed(KEY_T))
-		{
-			farPlane++;
-		}
-		if (IsKeyPressed(KEY_G))
-		{
-			farPlane--;
-		}
-		farPlane = Clamp(farPlane, nearPlane + 1.0f, farPlane);
+		Inputs(camera, nearPlane, farPlane);
 
 		float aspectRatio = (float)GetScreenWidth() / (float)GetScreenHeight();
-
-		UpdateFrustum(cameraFrustum, camera, aspectRatio, nearPlane, farPlane);
-
 		int visibleCount = 0;
 
-		for (int i = 0; i < sceneObjects.size(); i++)
-		{
-			Matrix matTranslate = MatrixTranslate(sceneObjects[i].position.x, sceneObjects[i].position.y, sceneObjects[i].position.z);
-			MyAABB worldAABB = GetUpdatedAABB(sceneObjects[i].aabb, matTranslate);
+		Update(cameraFrustum, camera, aspectRatio, nearPlane, farPlane, sceneObjects, visibleCount);
 
-			sceneObjects[i].isVisible = IsAABBInFrustum(cameraFrustum, worldAABB);
-
-			if (sceneObjects[i].isVisible)
-			{
-				visibleCount++;
-			}
-		}
-
-		BeginDrawing();
-		ClearBackground(RAYWHITE);
-
-		BeginMode3D(camera);
-
-		DrawGrid(100, 1.0f);
-
-		for (int i = 0; i < sceneObjects.size(); i++)
-		{
-			Matrix matTranslate = MatrixTranslate(sceneObjects[i].position.x, sceneObjects[i].position.y, sceneObjects[i].position.z);
-			MyAABB worldAABB = GetUpdatedAABB(sceneObjects[i].aabb, matTranslate);
-
-			if (sceneObjects[i].isVisible)
-			{
-				DrawModel(sceneObjects[i].model, sceneObjects[i].position, 1.0f, RED);
-				DrawModelWires(sceneObjects[i].model, sceneObjects[i].position, 1.0f, MAROON);
-				DrawAABB(worldAABB, BLUE);
-			}
-			else
-			{
-				DrawModelWires(sceneObjects[i].model, sceneObjects[i].position, 1.0f, LIGHTGRAY);
-				DrawAABB(worldAABB, GRAY);
-			}
-		}
-
-		EndMode3D();
-
-		DrawText(TextFormat("Visible objects: %d/%d", visibleCount, sceneObjects.size()), 10, 10, 20, BLACK);
-		DrawText("WASD to Move, Mouse to Look, Q/E to Change FOV", 10, 35, 15, DARKGRAY);
-		DrawText("R/F to Change NearPlane, T/G to Change FarPlane", 10, 55, 15, DARKGRAY);
-
-		DrawText("FOV:", 10, 80, 15, DARKGRAY);
-		DrawText(TextFormat("%s", std::to_string((int)camera.fovy).c_str()), 50, 80, 15, BLACK);
-		DrawText("Planes:", 10, 95, 15, DARKGRAY);
-		DrawText(TextFormat("%s", std::to_string((int)nearPlane).c_str()), 10, 125, 15, BLACK);
-		DrawText(TextFormat("%s", std::to_string((int)farPlane).c_str()), 10, 150, 15, BLACK);
-
-		EndDrawing();
+		Draw(camera, sceneObjects, visibleCount, nearPlane, farPlane);
 	}
 
 	for (int i = 0; i < sceneObjects.size() - 1; i++)
@@ -157,4 +77,99 @@ int main()
 	CloseWindow();
 
 	return 0;
+}
+
+void Update(Frustum& cameraFrustum, const Camera& camera, float aspectRatio, float nearPlane, float farPlane, std::vector<SceneObject>& sceneObjects, int& visibleCount)
+{
+	UpdateFrustum(cameraFrustum, camera, aspectRatio, nearPlane, farPlane);
+
+	for (int i = 0; i < sceneObjects.size(); i++)
+	{
+		Matrix matTranslate = MatrixTranslate(sceneObjects[i].position.x, sceneObjects[i].position.y, sceneObjects[i].position.z);
+		MyAABB worldAABB = GetUpdatedAABB(sceneObjects[i].aabb, matTranslate);
+
+		sceneObjects[i].isVisible = IsAABBInFrustum(cameraFrustum, worldAABB);
+
+		if (sceneObjects[i].isVisible)
+		{
+			visibleCount++;
+		}
+	}
+}
+
+void Draw(Camera& camera, std::vector<SceneObject>& sceneObjects, int visibleCount, float nearPlane, float farPlane)
+{
+	BeginDrawing();
+	ClearBackground(RAYWHITE);
+
+	BeginMode3D(camera);
+
+	DrawGrid(100, 1.0f);
+
+	for (int i = 0; i < sceneObjects.size(); i++)
+	{
+		Matrix matTranslate = MatrixTranslate(sceneObjects[i].position.x, sceneObjects[i].position.y, sceneObjects[i].position.z);
+		MyAABB worldAABB = GetUpdatedAABB(sceneObjects[i].aabb, matTranslate);
+
+		if (sceneObjects[i].isVisible)
+		{
+			DrawModel(sceneObjects[i].model, sceneObjects[i].position, 1.0f, RED);
+			DrawModelWires(sceneObjects[i].model, sceneObjects[i].position, 1.0f, MAROON);
+			DrawAABB(worldAABB, BLUE);
+		}
+		else
+		{
+			DrawModelWires(sceneObjects[i].model, sceneObjects[i].position, 1.0f, LIGHTGRAY);
+			DrawAABB(worldAABB, GRAY);
+		}
+	}
+
+	EndMode3D();
+
+	DrawText(TextFormat("Visible objects: %d/%d", visibleCount, sceneObjects.size()), 10, 10, 20, BLACK);
+	DrawText("WASD to Move, Mouse to Look, Q/E to Change FOV", 10, 35, 15, DARKGRAY);
+	DrawText("R/F to Change NearPlane, T/G to Change FarPlane", 10, 55, 15, DARKGRAY);
+
+	DrawText("FOV:", 10, 80, 15, DARKGRAY);
+	DrawText(TextFormat("%s", std::to_string((int)camera.fovy).c_str()), 50, 80, 15, BLACK);
+	DrawText("Planes:", 10, 95, 15, DARKGRAY);
+	DrawText(TextFormat("%s", std::to_string((int)nearPlane).c_str()), 10, 125, 15, BLACK);
+	DrawText(TextFormat("%s", std::to_string((int)farPlane).c_str()), 10, 150, 15, BLACK);
+
+	EndDrawing();
+}
+
+void Inputs(Camera& camera, float& nearPlane, float& farPlane)
+{
+	UpdateCamera(&camera, CAMERA_FREE);
+
+	if (IsKeyPressed(KEY_Q))
+	{
+		camera.fovy += 2.0f;
+	}
+	if (IsKeyPressed(KEY_E))
+	{
+		camera.fovy -= 2.0f;
+	}
+	camera.fovy = Clamp(camera.fovy, 1.0f, 180.0f);
+
+	if (IsKeyPressed(KEY_R))
+	{
+		nearPlane++;
+	}
+	if (IsKeyPressed(KEY_F))
+	{
+		nearPlane--;
+	}
+	nearPlane = Clamp(nearPlane, 0.0f, farPlane - 1.0f);
+
+	if (IsKeyPressed(KEY_T))
+	{
+		farPlane++;
+	}
+	if (IsKeyPressed(KEY_G))
+	{
+		farPlane--;
+	}
+	farPlane = Clamp(farPlane, nearPlane + 1.0f, farPlane);
 }
