@@ -9,6 +9,8 @@
 #include "SceneObject.h"
 #include "main.h"
 
+static bool IsMeshInFrustum(Frustum& frustum, SceneObject& object);
+
 int main()
 {
 	const int screenWidth = 1600;
@@ -42,7 +44,7 @@ int main()
 	obj2.aabb = CalculateLocalAABB(*obj2.model.meshes);
 	sceneObjects.push_back(obj2);
 
-	for (int i = 0; i < 50; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		SceneObject objRand;
 		objRand.model = LoadModel("res/dodecahedron.obj");
@@ -68,7 +70,7 @@ int main()
 	for (int i = 0; i < sceneObjects.size() - 1; i++)
 	{
 		SceneObject& obj = sceneObjects[i];
-		if (IsModelValid(obj.model)) 
+		if (IsModelValid(obj.model))
 		{
 			UnloadModel(obj.model);
 		}
@@ -88,7 +90,13 @@ void Update(Frustum& cameraFrustum, const Camera& camera, float aspectRatio, flo
 		Matrix matTranslate = MatrixTranslate(sceneObjects[i].position.x, sceneObjects[i].position.y, sceneObjects[i].position.z);
 		MyAABB worldAABB = GetUpdatedAABB(sceneObjects[i].aabb, matTranslate);
 
-		sceneObjects[i].isVisible = IsAABBInFrustum(cameraFrustum, worldAABB);
+		if (IsAABBInFrustum(cameraFrustum, worldAABB))
+		{
+			sceneObjects[i].isVisible = IsMeshInFrustum(cameraFrustum, sceneObjects[i]);
+		}
+		else {
+			sceneObjects[i].isVisible = false;
+		}
 
 		if (sceneObjects[i].isVisible)
 		{
@@ -172,4 +180,21 @@ void Inputs(Camera& camera, float& nearPlane, float& farPlane)
 		farPlane--;
 	}
 	farPlane = Clamp(farPlane, nearPlane + 1.0f, farPlane);
+}
+
+bool IsMeshInFrustum(Frustum& frustum, SceneObject& object)
+{
+	for (int i = 0; i < 6; i++)
+	{
+		for (int j = 0; j < object.model.meshes[0].vertexCount; j += 3)
+		{
+			Vector3 v0 = { object.model.meshes[0].vertices[(j + 0)], object.model.meshes[0].vertices[(j + 1)], object.model.meshes[0].vertices[(j + 2)] };
+			float dot = Vector3DotProduct(frustum.planes[i].normal, v0);
+
+			if (dot > EPSILON) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
